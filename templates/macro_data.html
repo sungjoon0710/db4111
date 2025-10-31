@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macro Data - ESGTrader</title>
+</head>
+<body>
+    <h1>All Macro Data</h1>
+    <p><a href="/">Back to Home</a></p>
+    
+    {% if macro_data %}
+        <table border="1">
+            <tr>
+                <th>Macro Date</th>
+                <th>Risk Free Rate</th>
+                <th>Interest Rate</th>
+            </tr>
+            {% for data in macro_data %}
+                <tr>
+                    <td>{{ data[0] }}</td>
+                    <td>{{ data[1] }}</td>
+                    <td>{{ data[2] }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No macro data found.</p>
+    {% endif %}
+</body>
+</html>
+

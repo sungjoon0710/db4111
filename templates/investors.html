@@ -3,29 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stocks - ESGTrader</title>
+    <title>Investors - ESGTrader</title>
 </head>
 <body>
-    <h1>All Stocks</h1>
+    <h1>All Investors</h1>
     <p><a href="/">Back to Home</a></p>
     
-    {% if stocks %}
+    {% if investors %}
         <table border="1">
             <tr>
-                <th>Stock ID</th>
-                <th>Ticker</th>
-                <th>Sector</th>
+                <th>Investor ID</th>
+                <th>Company Name</th>
             </tr>
-            {% for stock in stocks %}
+            {% for investor in investors %}
                 <tr>
-                    <td>{{ stock[0] }}</td>
-                    <td>{{ stock[1] }}</td>
-                    <td>{{ stock[2] }}</td>
+                    <td>{{ investor[0] }}</td>
+                    <td>{{ investor[1] }}</td>
                 </tr>
             {% endfor %}
         </table>
     {% else %}
-        <p>No stocks found.</p>
+        <p>No investors found.</p>
     {% endif %}
 </body>
 </html>

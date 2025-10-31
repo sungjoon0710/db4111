@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Metrics - ESGTrader</title>
+</head>
+<body>
+    <h1>All Risk Metrics</h1>
+    <p><a href="/">Back to Home</a></p>
+    
+    {% if risk_metrics %}
+        <table border="1">
+            <tr>
+                <th>Portfolio ID</th>
+                <th>Metric Date</th>
+                <th>Sharpe Ratio</th>
+                <th>Beta</th>
+                <th>Volatility</th>
+                <th>VaR</th>
+            </tr>
+            {% for metric in risk_metrics %}
+                <tr>
+                    <td>{{ metric[0] }}</td>
+                    <td>{{ metric[1] }}</td>
+                    <td>{{ metric[2] }}</td>
+                    <td>{{ metric[3] }}</td>
+                    <td>{{ metric[4] }}</td>
+                    <td>{{ metric[5] }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No risk metrics found.</p>
+    {% endif %}
+</body>
+</html>
+

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holdings - ESGTrader</title>
+</head>
+<body>
+    <h1>All Holdings</h1>
+    <p><a href="/">Back to Home</a></p>
+    
+    {% if holdings %}
+        <table border="1">
+            <tr>
+                <th>Stock ID</th>
+                <th>Portfolio ID</th>
+                <th>Average Price</th>
+                <th>Holding Count</th>
+            </tr>
+            {% for holding in holdings %}
+                <tr>
+                    <td>{{ holding[0] }}</td>
+                    <td>{{ holding[1] }}</td>
+                    <td>{{ holding[2] }}</td>
+                    <td>{{ holding[3] }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No holdings found.</p>
+    {% endif %}
+</body>
+</html>
+

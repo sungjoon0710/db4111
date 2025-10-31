@@ -3,29 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stocks - ESGTrader</title>
+    <title>ESG Scores - ESGTrader</title>
 </head>
 <body>
-    <h1>All Stocks</h1>
+    <h1>All ESG Scores</h1>
     <p><a href="/">Back to Home</a></p>
     
-    {% if stocks %}
+    {% if esg_scores %}
         <table border="1">
             <tr>
                 <th>Stock ID</th>
-                <th>Ticker</th>
-                <th>Sector</th>
+                <th>Score Date</th>
+                <th>ESG Score</th>
             </tr>
-            {% for stock in stocks %}
+            {% for score in esg_scores %}
                 <tr>
-                    <td>{{ stock[0] }}</td>
-                    <td>{{ stock[1] }}</td>
-                    <td>{{ stock[2] }}</td>
+                    <td>{{ score[0] }}</td>
+                    <td>{{ score[1] }}</td>
+                    <td>{{ score[2] }}</td>
                 </tr>
             {% endfor %}
         </table>
     {% else %}
-        <p>No stocks found.</p>
+        <p>No ESG scores found.</p>
     {% endif %}
 </body>
 </html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolios - ESGTrader</title>
+</head>
+<body>
+    <h1>All Portfolios</h1>
+    <p><a href="/">Back to Home</a></p>
+    
+    {% if portfolios %}
+        <table border="1">
+            <tr>
+                <th>Portfolio ID</th>
+                <th>Investor ID</th>
+                <th>Total Value</th>
+                <th>Creation Date</th>
+            </tr>
+            {% for portfolio in portfolios %}
+                <tr>
+                    <td>{{ portfolio[0] }}</td>
+                    <td>{{ portfolio[1] }}</td>
+                    <td>{{ portfolio[2] }}</td>
+                    <td>{{ portfolio[3] }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No portfolios found.</p>
+    {% endif %}
+</body>
+</html>
+
