@@ -1,16 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stocks - ESGTrader</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Stocks - ESGTrader{% endblock %}
+
+{% block content %}
     <h1>All Stocks</h1>
-    <p><a href="/">Back to Home</a></p>
+    <div class="nav-links">
+        <a href="/">← Back to Home</a>
+    </div>
     
     {% if stocks %}
-        <table border="1">
+        <table>
             <tr>
                 <th>Stock ID</th>
                 <th>Ticker</th>
@@ -27,6 +26,5 @@
     {% else %}
         <p>No stocks found.</p>
     {% endif %}
-</body>
-</html>
+{% endblock %}
 

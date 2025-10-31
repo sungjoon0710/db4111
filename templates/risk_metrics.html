@@ -1,16 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Risk Metrics - ESGTrader</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Risk Metrics - ESGTrader{% endblock %}
+
+{% block content %}
     <h1>All Risk Metrics</h1>
-    <p><a href="/">Back to Home</a></p>
+    <div class="nav-links">
+        <a href="/">← Back to Home</a>
+    </div>
     
     {% if risk_metrics %}
-        <table border="1">
+        <table>
             <tr>
                 <th>Portfolio ID</th>
                 <th>Metric Date</th>
@@ -33,6 +32,5 @@
     {% else %}
         <p>No risk metrics found.</p>
     {% endif %}
-</body>
-</html>
+{% endblock %}
 

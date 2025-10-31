@@ -174,6 +174,23 @@ def another():
 	return render_template("another.html")
 
 
+@app.route('/demo')
+def demo():
+	"""
+	Demo page showing the test table with computer scientists
+	"""
+	# Same query as index page
+	select_query = "SELECT name from test"
+	cursor = g.conn.execute(text(select_query))
+	names = []
+	for result in cursor:
+		names.append(result[0])
+	cursor.close()
+	
+	context = dict(data=names)
+	return render_template("demo.html", **context)
+
+
 # Route to display all stocks
 @app.route('/stocks')
 def stocks():
@@ -365,7 +382,7 @@ def add():
 	params["new_name"] = name
 	g.conn.execute(text('INSERT INTO test(name) VALUES (:new_name)'), params)
 	g.conn.commit()
-	return redirect('/')
+	return redirect('/demo')
 
 
 @app.route('/login')

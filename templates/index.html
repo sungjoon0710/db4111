@@ -1,43 +1,110 @@
-<html>
-  <style>
-    body{ 
-      font-size: 15pt;
-      font-family: arial;
-    }
-  </style>
+{% extends "base.html" %}
 
+{% block title %}ESGTrader - Home{% endblock %}
 
-<body>
-
-  <h1>ESGTrader</h1>
-  <p><a href="/stocks">View All Stocks</a></p>
-  <p><a href="/investors">View All Investors</a></p>
-  <p><a href="/transactions">View All Transactions</a></p>
-  <p><a href="/holdings">View All Holdings</a></p>
-  <p><a href="/portfolios">View All Portfolios</a></p>
-  <p><a href="/risk_metrics">View All Risk Metrics</a></p>
-  <p><a href="/macro_data">View All Macro Data</a></p>
-  <p><a href="/stock_prices">View All Stock Prices</a></p>
-  <p><a href="/esg_scores">View All ESG Scores</a></p>
-
-
+{% block content %}
+<style>
+  body {
+    background-color: #F0FFF0 !important;
+  }
   
-  <h1>Some famous Computer Scientists</h1>
-  <div>{{data}}</div>
+  .hero-section {
+    background: linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 100%);
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .hero-section h1 {
+    color: #2E7D32;
+    font-size: 2.5em;
+    margin-bottom: 10px;
+  }
+  
+  .hero-section p {
+    color: #558B2F;
+    font-size: 1.1em;
+  }
+  
+  .table-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+  }
+  
+  .table-link {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: 2px solid #C8E6C9;
+  }
+  
+  .table-link:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(46, 125, 50, 0.2);
+    border-color: #4CAF50;
+  }
+  
+  .table-link a {
+    color: #2E7D32;
+    font-weight: bold;
+    text-decoration: none;
+    display: block;
+  }
+  
+  .section-title {
+    color: #2E7D32;
+    border-bottom: 3px solid #81C784;
+    padding-bottom: 10px;
+    margin-top: 40px;
+  }
+</style>
 
-  <div>
-    {% for n in data %}
-    <div>{{n}}</div>
-    {% endfor %}
+  <div class="hero-section">
+    <h1>🌱 ESGTrader</h1>
+    <p>Investment Portfolio & ESG Analytics Platform</p>
+  </div>
+  
+  <h2 class="section-title">Database Tables</h2>
+  
+  <div class="table-grid">
+    <div class="table-link">
+      <a href="/stocks">📈 Stocks</a>
+    </div>
+    <div class="table-link">
+      <a href="/investors">👥 Investors</a>
+    </div>
+    <div class="table-link">
+      <a href="/portfolios">💼 Portfolios</a>
+    </div>
+    <div class="table-link">
+      <a href="/holdings">📊 Holdings</a>
+    </div>
+    <div class="table-link">
+      <a href="/transactions">💳 Transactions</a>
+    </div>
+    <div class="table-link">
+      <a href="/risk_metrics">⚠️ Risk Metrics</a>
+    </div>
+    <div class="table-link">
+      <a href="/macro_data">🌍 Macro Data</a>
+    </div>
+    <div class="table-link">
+      <a href="/stock_prices">💰 Stock Prices</a>
+    </div>
+    <div class="table-link">
+      <a href="/esg_scores">🌿 ESG Scores</a>
+    </div>
   </div>
 
-<p><a href="another">Go to the other page</a></p>
-
-<form method="POST" action="/add">
-<p>Name of new computer scientist: <input type="text" name="name"> <input type="submit" value="Add"></p>
-</form>
-
-</body>
-
-
-</html>
+  <div style="margin-top: 40px; text-align: center;">
+    <a href="/demo" style="display: inline-block; padding: 15px 30px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; transition: background-color 0.3s;">
+      View Demo Page →
+    </a>
+  </div>
+{% endblock %}

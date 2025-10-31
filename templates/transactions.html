@@ -1,16 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transactions - ESGTrader</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Transactions - ESGTrader{% endblock %}
+
+{% block content %}
     <h1>All Transactions</h1>
-    <p><a href="/">Back to Home</a></p>
+    <div class="nav-links">
+        <a href="/">← Back to Home</a>
+    </div>
     
     {% if transactions %}
-        <table border="1">
+        <table>
             <tr>
                 <th>Investor ID</th>
                 <th>Stock ID</th>
@@ -33,6 +32,5 @@
     {% else %}
         <p>No transactions found.</p>
     {% endif %}
-</body>
-</html>
+{% endblock %}
 
