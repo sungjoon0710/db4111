@@ -1,6 +1,38 @@
 # ESGTrader - Database Project Part 3
+Project 1, Part 3 — COMS W4111 Introduction to Databases
+Group: Project 1 Group 1
 
-Flask web application for ESGTrader using PostgreSQL.
+1. PostgreSQL Account:
+   Username: jl6316
+   Database: proj1part2
+   Host: 34.139.8.30
+
+2. Web Application URL:
+   http://35.196.122.240:8111/
+
+3. Implementation Summary:
+   - Implemented all pages from our Part 1 proposal, including:
+     • Investor information
+     • Stock data and performance visualization
+     • Portfolio and transaction tracking
+   - Added additional features:
+     • ESG score integration
+     • Daily macroeconomic data page
+
+4. Unimplemented Parts:
+   - (If any, list here. Otherwise say “All proposed features implemented.”)
+   - Example: “Did not implement real-time data refresh due to time constraints.”
+
+5. Interesting Pages and Database Operations:
+   (a) /transactions
+       - Shows all investor transactions.
+       - Executes `SELECT * FROM transaction`.
+       - Interesting because it involves joining multiple tables (investor, stock, portfolio).
+
+   (b) /risk_metrics
+       - Displays calculated risk scores from database.
+       - Executes a complex query joining multiple data sources and applying aggregate functions.
+       - Interesting because it demonstrates analytical use of SQL.
 
 ## Setup Instructions
 
