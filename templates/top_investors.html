@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Top Investors - ESGTrader{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #F0FFF0 !important;
+  }
+  
+  tr:hover {
+    background-color: #F1F8E9 !important;
+  }
+</style>
+
+  <div class="hero-section">
+    <h1>🏆 Top Investors by P&L</h1>
+    <p>Ranked by Profit & Loss on Current Holdings</p>
+  </div>
+  
+  <div class="nav-links">
+    <a href="/">← Back to Home</a>
+  </div>
+  
+  {% if investors %}
+    <div class="analytics-table">
+      <table>
+        <tr>
+          <th class="rank-column">Rank</th>
+          <th>Investor ID</th>
+          <th>Company Name</th>
+          <th style="text-align: right;">Total P&L ($)</th>
+          <th style="text-align: right;">Number of Holdings</th>
+        </tr>
+        {% for investor in investors %}
+          <tr {% if loop.index == 1 %}{% endif %}>
+            <td class="rank-column">
+              {% if loop.index == 1 %}🥇
+              {% elif loop.index == 2 %}🥈
+              {% elif loop.index == 3 %}🥉
+              {% else %}{{ loop.index }}
+              {% endif %}
+            </td>
+            <td>{{ investor[0] }}</td>
+            <td><strong>{{ investor[1] }}</strong></td>
+            <td style="text-align: right;" class="{% if investor[2] >= 0 %}metric-positive{% else %}metric-negative{% endif %}">
+              ${{ "{:,.2f}".format(investor[2]) }}
+            </td>
+            <td style="text-align: right;">{{ investor[3] }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p>No investor data found.</p>
+  {% endif %}
+  
+  <div style="margin-top: 30px; padding: 20px; background-color: white; border-radius: 8px; border: 2px solid #C8E6C9;">
+    <h3 style="color: #2E7D32;">Calculation Method:</h3>
+    <p>P&L (Profit & Loss) = Current Market Value - Cost Basis</p>
+    <ul>
+      <li><strong>Current Market Value:</strong> Latest stock price × holding count</li>
+      <li><strong>Cost Basis:</strong> Average purchase price × holding count</li>
+    </ul>
+  </div>
+{% endblock %}
+

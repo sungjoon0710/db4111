@@ -371,6 +371,116 @@ def esg_scores():
 	return render_template("esg_scores.html", **context)
 
 
+# Route to display top investors by P&L
+@app.route('/top_investors')
+def top_investors():
+	"""
+	Display investors ranked by profit/loss on their holdings
+	Calculates P&L as: (current_price - average_price) * holding_count
+	"""
+	# Query to calculate P&L for each investor
+	select_query = """
+		SELECT 
+			i.investor_id,
+			i.company_name,
+			COALESCE(SUM((latest_prices.daily_price - h.average_price) * h.holding_count), 0) as total_pnl,
+			COUNT(h.stock_id) as num_holdings
+		FROM investor i
+		LEFT JOIN portfolio p ON i.investor_id = p.investor_id
+		LEFT JOIN holdings h ON p.portfolio_id = h.portfolio_id
+		LEFT JOIN (
+			SELECT DISTINCT ON (stock_id) stock_id, daily_price
+			FROM stock_price
+			ORDER BY stock_id, price_date DESC
+		) latest_prices ON h.stock_id = latest_prices.stock_id
+		GROUP BY i.investor_id, i.company_name
+		ORDER BY total_pnl DESC
+	"""
+	cursor = g.conn.execute(text(select_query))
+	
+	investors_list = []
+	for result in cursor:
+		investors_list.append(result)
+	cursor.close()
+	
+	# Pass the investors data to the template
+	context = dict(investors=investors_list)
+	return render_template("top_investors.html", **context)
+
+
+# Route to display top ESG portfolios with risk metrics
+@app.route('/esg-stocks')
+def esg_stocks():
+	"""
+	Display portfolios ranked by average ESG score with risk metrics
+	Shows correlation between sustainability and risk-adjusted returns
+	"""
+	# Query joins Portfolio, Holdings, ESG_Score, and Risk_Metrics tables
+	select_query = """
+		SELECT p.portfolio_id,
+			ROUND(AVG(e.esg_score), 2) AS avg_esg_score,
+			r.sharpe_ratio,
+			r.beta
+		FROM Portfolio p
+		JOIN Holdings h ON p.portfolio_id = h.portfolio_id
+		JOIN ESG_Score e ON h.stock_id = e.stock_id
+		JOIN Risk_Metrics r ON p.portfolio_id = r.portfolio_id
+		GROUP BY p.portfolio_id, r.sharpe_ratio, r.beta
+		ORDER BY avg_esg_score DESC
+	"""
+	cursor = g.conn.execute(text(select_query))
+	
+	portfolios_list = []
+	for result in cursor:
+		portfolios_list.append(result)
+	cursor.close()
+	
+	# Pass the portfolios data to the template
+	context = dict(portfolios=portfolios_list)
+	return render_template("esg-stocks.html", **context)
+
+
+# Route to display best buy transactions by unrealized P&L
+@app.route('/best_buys')
+def best_buys():
+	"""
+	Display buy transactions ranked by unrealized gain/loss
+	Calculates unrealized P&L as: (current_price - purchase_price) * unit_number
+	"""
+	# Query joins Transaction, Stock, and Stock_Price tables
+	select_query = """
+		SELECT 
+			t.investor_id,
+			s.ticker,
+			t.unit_price AS purchase_price,
+			sp.daily_price AS current_price,
+			ROUND((sp.daily_price - t.unit_price) * t.unit_number, 2) AS unrealized_gain
+		FROM Transaction t
+		JOIN Stock s ON t.stock_id = s.stock_id
+		JOIN (
+			SELECT stock_id, daily_price
+			FROM stock_price
+			WHERE (stock_id, price_date) IN (
+				SELECT stock_id, MAX(price_date)
+				FROM stock_price
+				GROUP BY stock_id
+			)
+		) sp ON s.stock_id = sp.stock_id
+		WHERE t.transaction_type = 'buy'
+		ORDER BY unrealized_gain DESC
+	"""
+	cursor = g.conn.execute(text(select_query))
+	
+	transactions_list = []
+	for result in cursor:
+		transactions_list.append(result)
+	cursor.close()
+	
+	# Pass the transactions data to the template
+	context = dict(transactions=transactions_list)
+	return render_template("best_buys.html", **context)
+
+
 # Example of adding new data to the database
 @app.route('/add', methods=['POST'])
 def add():

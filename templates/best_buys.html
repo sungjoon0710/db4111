@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Best Buys - ESGTrader{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #F0FFF0 !important;
+  }
+  
+  /* Ticker badge styling */
+  .ticker-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #E8F5E9;
+    border: 2px solid #66BB6A;
+    border-radius: 5px;
+    font-weight: bold;
+    color: #2E7D32;
+  }
+  
+  tr:hover {
+    background-color: #FFFDE7 !important;
+  }
+  
+  .info-box h3 {
+    color: #2E7D32;
+  }
+  
+  .price-arrow {
+    font-size: 1.5em;
+  }
+</style>
+
+  <div class="hero-section">
+    <h1>💰 Best Buy Transactions - Unrealized P&L</h1>
+    <p>Ranking Investor Purchases by Current Unrealized Gains</p>
+  </div>
+  
+  <div class="nav-links">
+    <a href="/">← Back to Home</a>
+  </div>
+  
+  {% if transactions %}
+    <div class="analytics-table">
+      <table>
+        <tr>
+          <th class="rank-column">Rank</th>
+          <th>Investor ID</th>
+          <th>Stock Ticker</th>
+          <th style="text-align: right;">Purchase Price</th>
+          <th style="text-align: right;">Current Price</th>
+          <th style="text-align: right;">Unrealized Gain ($)</th>
+          <th style="text-align: center;">Performance</th>
+        </tr>
+        {% for txn in transactions %}
+          <tr>
+            <td class="rank-column">
+              {% if loop.index == 1 %}🥇
+              {% elif loop.index == 2 %}🥈
+              {% elif loop.index == 3 %}🥉
+              {% else %}{{ loop.index }}
+              {% endif %}
+            </td>
+            <td><strong>{{ txn[0] }}</strong></td>
+            <td>
+              <span class="ticker-badge">{{ txn[1] }}</span>
+            </td>
+            <td style="text-align: right;">${{ "{:.2f}".format(txn[2]) }}</td>
+            <td style="text-align: right;">${{ "{:.2f}".format(txn[3]) }}</td>
+            <td style="text-align: right;" class="{% if txn[4] >= 0 %}metric-positive{% else %}metric-negative{% endif %}">
+              ${{ "{:,.2f}".format(txn[4]) }}
+            </td>
+            <td style="text-align: center;">
+              {% if txn[4] > 0 %}
+                <span class="price-arrow" style="color: #2E7D32;">📈 {{ "{:.1f}".format(((txn[3] - txn[2]) / txn[2] * 100)) }}%</span>
+              {% elif txn[4] < 0 %}
+                <span class="price-arrow" style="color: #D32F2F;">📉 {{ "{:.1f}".format(((txn[3] - txn[2]) / txn[2] * 100)) }}%</span>
+              {% else %}
+                <span style="color: #666;">━ 0.0%</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p>No buy transactions found.</p>
+  {% endif %}
+  
+  <div class="info-box">
+    <h3>💡 Understanding Unrealized P&L:</h3>
+    <p><strong>Unrealized Gain/Loss</strong> = (Current Price - Purchase Price) × Number of Units</p>
+    <ul>
+      <li><strong>Positive values (green):</strong> The stock price has increased since purchase - potential profit if sold now</li>
+      <li><strong>Negative values (red):</strong> The stock price has decreased since purchase - potential loss if sold now</li>
+      <li><strong>Unrealized:</strong> Gains/losses haven't been "realized" yet because the shares haven't been sold</li>
+    </ul>
+    
+    <h3 style="margin-top: 20px;">📊 How This Query Works:</h3>
+    <ul>
+      <li>Filters for <strong>'buy'</strong> transactions only</li>
+      <li>Retrieves the <strong>most recent stock price</strong> from the Stock_Price table</li>
+      <li>Calculates unrealized gains assuming shares haven't been sold</li>
+      <li>Orders results by unrealized gain (highest first) to show the best-performing purchases</li>
+    </ul>
+    
+    <div style="background-color: #FFF9C4; padding: 15px; border-radius: 5px; margin-top: 15px; border-left: 4px solid #FBC02D;">
+      <strong>🎯 Investment Insight:</strong> Top-ranked transactions show which investors made the best buying decisions. High unrealized gains indicate stocks purchased at good prices that have since appreciated significantly.
+    </div>
+  </div>
+{% endblock %}
+

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Top ESG Stocks - ESGTrader{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #F0FFF0 !important;
+  }
+  
+  /* ESG-specific styling */
+  
+  .esg-excellent {
+    background-color: #2E7D32;
+  }
+  
+  .esg-good {
+    background-color: #66BB6A;
+  }
+  
+  .esg-fair {
+    background-color: #FFA726;
+  }
+  
+  .esg-poor {
+    background-color: #EF5350;
+  }
+  
+  tr:hover {
+    background-color: #F1F8E9 !important;
+  }
+  
+  .info-box h3 {
+    color: #2E7D32;
+  }
+</style>
+
+  <div class="hero-section">
+    <h1>🌿 Top ESG Portfolios for Risk-Adjusted Returns</h1>
+    <p>Portfolios Ranked by Average ESG Score with Risk Metrics</p>
+  </div>
+  
+  <div class="nav-links">
+    <a href="/">← Back to Home</a>
+  </div>
+  
+  {% if portfolios %}
+    <div class="analytics-table">
+      <table>
+        <tr>
+          <th class="rank-column">Rank</th>
+          <th>Portfolio ID</th>
+          <th style="text-align: center;">Avg ESG Score</th>
+          <th style="text-align: center;">Sharpe Ratio</th>
+          <th style="text-align: center;">Beta</th>
+          <th style="text-align: center;">ESG Rating</th>
+        </tr>
+        {% for portfolio in portfolios %}
+          <tr {% if loop.index <= 3 %}{% endif %}>
+            <td class="rank-column">
+              {% if loop.index == 1 %}🥇
+              {% elif loop.index == 2 %}🥈
+              {% elif loop.index == 3 %}🥉
+              {% else %}{{ loop.index }}
+              {% endif %}
+            </td>
+            <td><strong>{{ portfolio[0] }}</strong></td>
+            <td style="text-align: center;" class="{% if portfolio[1] >= 80 %}metric-positive{% endif %}">{{ portfolio[1] }}</td>
+            <td style="text-align: center;" class="{% if portfolio[2] > 1 %}metric-positive{% elif portfolio[2] < 0 %}metric-negative{% endif %}">
+              {{ "{:.2f}".format(portfolio[2]) if portfolio[2] is not none else 'N/A' }}
+            </td>
+            <td style="text-align: center;" class="{% if portfolio[3] < 1 %}metric-positive{% elif portfolio[3] > 1.5 %}metric-negative{% endif %}">
+              {{ "{:.2f}".format(portfolio[3]) if portfolio[3] is not none else 'N/A' }}
+            </td>
+            <td style="text-align: center;">
+              {% if portfolio[1] >= 80 %}
+                <span class="badge esg-excellent">Excellent</span>
+              {% elif portfolio[1] >= 60 %}
+                <span class="badge esg-good">Good</span>
+              {% elif portfolio[1] >= 40 %}
+                <span class="badge esg-fair">Fair</span>
+              {% else %}
+                <span class="badge esg-poor">Poor</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p>No portfolio data found.</p>
+  {% endif %}
+  
+  <div class="info-box">
+    <h3>Understanding the Metrics:</h3>
+    <ul>
+      <li><strong>ESG Score (0-100):</strong> Average environmental, social, and governance score of all stocks in the portfolio. Higher is more sustainable.</li>
+      <li><strong>Sharpe Ratio:</strong> Risk-adjusted return measure. Higher values indicate better returns per unit of risk. Above 1 is good, above 2 is excellent.</li>
+      <li><strong>Beta:</strong> Portfolio volatility relative to the market. Beta < 1 means less volatile, Beta > 1 means more volatile than the market.</li>
+    </ul>
+    
+    <h3 style="margin-top: 20px;">Key Insight:</h3>
+    <p>This analysis shows whether high ESG scores correlate with better risk-adjusted returns (Sharpe ratio) and market stability (beta). Look for portfolios with high ESG scores AND high Sharpe ratios for sustainable investing with strong returns.</p>
+  </div>
+{% endblock %}
+
