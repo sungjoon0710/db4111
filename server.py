@@ -9,6 +9,7 @@ A debugger such as "pdb" may be helpful for debugging.
 Read about it online.
 """
 import os
+from datetime import datetime, date
 # accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
@@ -174,21 +175,127 @@ def another():
 	return render_template("another.html")
 
 
-@app.route('/demo')
-def demo():
+@app.route('/new_investor')
+def new_investor():
 	"""
-	Demo page showing the test table with computer scientists
+	Page for creating new investor portfolios
 	"""
-	# Same query as index page
-	select_query = "SELECT name from test"
+	# Get confirmation message if redirected from add
+	confirmation = request.args.get('confirmation', '')
+	investor_id = request.args.get('investor_id', '')
+	company_name = request.args.get('company_name', '')
+	portfolio_id = request.args.get('portfolio_id', '')
+	
+	context = dict(
+		confirmation=confirmation,
+		investor_id=investor_id,
+		company_name=company_name,
+		portfolio_id=portfolio_id
+	)
+	return render_template("new_investor.html", **context)
+
+
+@app.route('/manage_investor')
+def manage_investor():
+	"""
+	Page for managing existing investor records - update or delete
+	"""
+	# Get all investors for the dropdown
+	select_query = "SELECT investor_id, company_name FROM investor ORDER BY investor_id"
 	cursor = g.conn.execute(text(select_query))
-	names = []
+	investors_list = []
 	for result in cursor:
-		names.append(result[0])
+		investors_list.append({'investor_id': result[0], 'company_name': result[1]})
 	cursor.close()
 	
-	context = dict(data=names)
-	return render_template("demo.html", **context)
+	# Get selected investor details if an investor_id is provided
+	selected_investor_id = request.args.get('investor_id', '')
+	selected_investor = None
+	portfolio_count = 0
+	
+	if selected_investor_id:
+		# Get investor details
+		investor_query = "SELECT investor_id, company_name FROM investor WHERE investor_id = :investor_id"
+		cursor = g.conn.execute(text(investor_query), {"investor_id": selected_investor_id})
+		result = cursor.fetchone()
+		if result:
+			selected_investor = {'investor_id': result[0], 'company_name': result[1]}
+		cursor.close()
+		
+		# Count portfolios for this investor
+		portfolio_query = "SELECT COUNT(*) FROM portfolio WHERE investor_id = :investor_id"
+		cursor = g.conn.execute(text(portfolio_query), {"investor_id": selected_investor_id})
+		portfolio_count = cursor.fetchone()[0]
+		cursor.close()
+	
+	# Get confirmation messages
+	confirmation = request.args.get('confirmation', '')
+	message = request.args.get('message', '')
+	
+	context = dict(
+		investors=investors_list,
+		selected_investor=selected_investor,
+		portfolio_count=portfolio_count,
+		confirmation=confirmation,
+		message=message
+	)
+	return render_template("manage_investor.html", **context)
+
+
+@app.route('/add_holdings', methods=['GET'])
+def add_holdings():
+	"""
+	Page for adding new holdings to portfolios
+	"""
+	# Get all investors for the first dropdown
+	investors_query = "SELECT investor_id, company_name FROM investor ORDER BY investor_id"
+	cursor = g.conn.execute(text(investors_query))
+	investors_list = []
+	for result in cursor:
+		investors_list.append({'investor_id': result[0], 'company_name': result[1]})
+	cursor.close()
+	
+	# Get selected investor if provided
+	selected_investor_id = request.args.get('investor_id', '')
+	
+	# Get portfolios for selected investor
+	portfolios_list = []
+	if selected_investor_id:
+		portfolios_query = "SELECT portfolio_id, total_value, creation_date FROM portfolio WHERE investor_id = :investor_id ORDER BY portfolio_id"
+		cursor = g.conn.execute(text(portfolios_query), {"investor_id": selected_investor_id})
+		for result in cursor:
+			portfolios_list.append({
+				'portfolio_id': result[0],
+				'total_value': result[1],
+				'creation_date': result[2]
+			})
+		cursor.close()
+	
+	# Get all stocks for the stock dropdown
+	stocks_query = "SELECT stock_id, ticker, sector FROM stock ORDER BY ticker"
+	cursor = g.conn.execute(text(stocks_query))
+	stocks_list = []
+	for result in cursor:
+		stocks_list.append({
+			'stock_id': result[0],
+			'ticker': result[1],
+			'sector': result[2]
+		})
+	cursor.close()
+	
+	# Get confirmation messages
+	confirmation = request.args.get('confirmation', '')
+	message = request.args.get('message', '')
+	
+	context = dict(
+		investors=investors_list,
+		portfolios=portfolios_list,
+		stocks=stocks_list,
+		selected_investor_id=selected_investor_id,
+		confirmation=confirmation,
+		message=message
+	)
+	return render_template("add_holdings.html", **context)
 
 
 # Route to display all stocks
@@ -485,14 +592,245 @@ def best_buys():
 @app.route('/add', methods=['POST'])
 def add():
 	# accessing form inputs from user
-	name = request.form['name']
+	company_name = request.form.get('company_name', '').strip()
 	
-	# passing params in for each variable into query
-	params = {}
-	params["new_name"] = name
-	g.conn.execute(text('INSERT INTO test(name) VALUES (:new_name)'), params)
+	# Validate that company name is not empty
+	if not company_name:
+		return redirect('/new_investor?confirmation=error&company_name=')
+	
+	# Query for all investor IDs to find the maximum numeric part
+	max_id_query = "SELECT investor_id FROM investor ORDER BY investor_id DESC LIMIT 1"
+	cursor = g.conn.execute(text(max_id_query))
+	result = cursor.fetchone()
+	cursor.close()
+	
+	# Extract numeric part from investor_id (format: INV###)
+	# Get the max number and add 1 (handle case where table is empty)
+	if result and result[0]:
+		# Extract numeric part from format like 'INV013'
+		numeric_part = int(result[0].replace('INV', ''))
+		new_number = numeric_part + 1
+	else:
+		new_number = 1
+	
+	# Format the new investor_id with leading zeros (e.g., INV014)
+	new_investor_id = f'INV{new_number:03d}'
+	
+	# Insert the new investor
+	params = {
+		"investor_id": new_investor_id,
+		"company_name": company_name
+	}
+	insert_query = "INSERT INTO investor(investor_id, company_name) VALUES (:investor_id, :company_name)"
+	g.conn.execute(text(insert_query), params)
+	
+	# Now create a portfolio for this investor
+	# Query for all portfolio IDs to find the maximum numeric part
+	max_portfolio_query = "SELECT portfolio_id FROM portfolio ORDER BY portfolio_id DESC LIMIT 1"
+	cursor = g.conn.execute(text(max_portfolio_query))
+	portfolio_result = cursor.fetchone()
+	cursor.close()
+	
+	# Extract numeric part from portfolio_id (format: PORT###)
+	# Get the max number and add 1 (handle case where table is empty)
+	if portfolio_result and portfolio_result[0]:
+		# Extract numeric part from format like 'PORT013'
+		portfolio_numeric = int(portfolio_result[0].replace('PORT', ''))
+		new_portfolio_number = portfolio_numeric + 1
+	else:
+		new_portfolio_number = 1
+	
+	# Format the new portfolio_id with leading zeros (e.g., PORT014)
+	new_portfolio_id = f'PORT{new_portfolio_number:03d}'
+	
+	# Get the current date from the system, or use default if not available
+	try:
+		creation_date = date.today().strftime('%Y-%m-%d')
+	except:
+		creation_date = '2025-11-12'
+	
+	# Insert the new portfolio with initial total_value of 0 and current date
+	insert_portfolio_query = """
+		INSERT INTO portfolio(portfolio_id, investor_id, total_value, creation_date) 
+		VALUES (:portfolio_id, :investor_id, :total_value, :creation_date)
+	"""
+	g.conn.execute(text(insert_portfolio_query), {
+		"portfolio_id": new_portfolio_id,
+		"investor_id": new_investor_id,
+		"total_value": 0,
+		"creation_date": creation_date
+	})
+	
 	g.conn.commit()
-	return redirect('/demo')
+	
+	# Redirect with confirmation message including portfolio info
+	return redirect(f'/new_investor?confirmation=success&investor_id={new_investor_id}&company_name={company_name}&portfolio_id={new_portfolio_id}')
+
+
+@app.route('/update_investor', methods=['POST'])
+def update_investor():
+	"""
+	Update an investor's company name
+	"""
+	investor_id = request.form.get('investor_id', '').strip()
+	new_company_name = request.form.get('company_name', '').strip()
+	
+	# Validate inputs
+	if not investor_id or not new_company_name:
+		return redirect('/manage_investor?confirmation=error&message=Invalid input')
+	
+	# Update the investor
+	update_query = "UPDATE investor SET company_name = :company_name WHERE investor_id = :investor_id"
+	params = {
+		"investor_id": investor_id,
+		"company_name": new_company_name
+	}
+	g.conn.execute(text(update_query), params)
+	g.conn.commit()
+	
+	# Redirect with success message
+	return redirect(f'/manage_investor?investor_id={investor_id}&confirmation=success&message=Company name updated successfully')
+
+
+@app.route('/delete_investor', methods=['POST'])
+def delete_investor():
+	"""
+	Delete an investor and their associated portfolios
+	"""
+	investor_id = request.form.get('investor_id', '').strip()
+	
+	# Validate input
+	if not investor_id:
+		return redirect('/manage_investor?confirmation=error&message=Invalid investor ID')
+	
+	try:
+		# First, get all portfolio IDs for this investor
+		portfolio_query = "SELECT portfolio_id FROM portfolio WHERE investor_id = :investor_id"
+		cursor = g.conn.execute(text(portfolio_query), {"investor_id": investor_id})
+		portfolio_ids = [row[0] for row in cursor]
+		cursor.close()
+		
+		# Delete holdings for each portfolio
+		for portfolio_id in portfolio_ids:
+			delete_holdings_query = "DELETE FROM holdings WHERE portfolio_id = :portfolio_id"
+			g.conn.execute(text(delete_holdings_query), {"portfolio_id": portfolio_id})
+		
+		# Delete risk metrics for each portfolio
+		for portfolio_id in portfolio_ids:
+			delete_risk_query = "DELETE FROM risk_metrics WHERE portfolio_id = :portfolio_id"
+			g.conn.execute(text(delete_risk_query), {"portfolio_id": portfolio_id})
+		
+		# Delete portfolios for this investor
+		delete_portfolio_query = "DELETE FROM portfolio WHERE investor_id = :investor_id"
+		g.conn.execute(text(delete_portfolio_query), {"investor_id": investor_id})
+		
+		# Delete transactions for this investor
+		delete_transactions_query = "DELETE FROM transaction WHERE investor_id = :investor_id"
+		g.conn.execute(text(delete_transactions_query), {"investor_id": investor_id})
+		
+		# Finally, delete the investor
+		delete_investor_query = "DELETE FROM investor WHERE investor_id = :investor_id"
+		g.conn.execute(text(delete_investor_query), {"investor_id": investor_id})
+		
+		g.conn.commit()
+		
+		# Redirect with success message
+		return redirect('/manage_investor?confirmation=success&message=Investor and associated data deleted successfully')
+	
+	except Exception as e:
+		g.conn.rollback()
+		return redirect(f'/manage_investor?confirmation=error&message=Error deleting investor: {str(e)}')
+
+
+@app.route('/submit_holdings', methods=['POST'])
+def submit_holdings():
+	"""
+	Add new holdings to a portfolio
+	"""
+	investor_id = request.form.get('investor_id', '').strip()
+	portfolio_id = request.form.get('portfolio_id', '').strip()
+	stock_id = request.form.get('stock_id', '').strip()
+	average_price = request.form.get('average_price', '').strip()
+	holding_count = request.form.get('holding_count', '').strip()
+	
+	# Validate all required fields are present
+	if not all([investor_id, portfolio_id, stock_id, average_price, holding_count]):
+		return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=error&message=All fields are required')
+	
+	# Validate and convert average_price to float
+	try:
+		average_price_float = float(average_price)
+	except ValueError:
+		return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=error&message=Average price must be a numeric value')
+	
+	# Validate and convert holding_count to int (round down if float)
+	try:
+		holding_count_float = float(holding_count)
+		holding_count_int = int(holding_count_float)  # This rounds down automatically
+	except ValueError:
+		return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=error&message=Holding count must be a numeric value')
+	
+	# Check if this holding already exists (stock_id, portfolio_id is primary key)
+	check_query = "SELECT COUNT(*) FROM holdings WHERE stock_id = :stock_id AND portfolio_id = :portfolio_id"
+	cursor = g.conn.execute(text(check_query), {"stock_id": stock_id, "portfolio_id": portfolio_id})
+	exists = cursor.fetchone()[0] > 0
+	cursor.close()
+	
+	if exists:
+		return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=error&message=This stock already exists in the selected portfolio')
+	
+	try:
+		# Get the most current stock price for the selected stock
+		price_query = """
+			SELECT daily_price 
+			FROM stock_price 
+			WHERE stock_id = :stock_id 
+			ORDER BY price_date DESC 
+			LIMIT 1
+		"""
+		cursor = g.conn.execute(text(price_query), {"stock_id": stock_id})
+		price_result = cursor.fetchone()
+		cursor.close()
+		
+		if not price_result or price_result[0] is None:
+			return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=error&message=No price data found for selected stock')
+		
+		current_stock_price = float(price_result[0])
+		
+		# Calculate the value to add to portfolio: holding_count * current_stock_price
+		value_to_add = holding_count_int * current_stock_price
+		
+		# Insert the new holding
+		insert_query = """
+			INSERT INTO holdings(stock_id, portfolio_id, average_price, holding_count) 
+			VALUES (:stock_id, :portfolio_id, :average_price, :holding_count)
+		"""
+		g.conn.execute(text(insert_query), {
+			"stock_id": stock_id,
+			"portfolio_id": portfolio_id,
+			"average_price": average_price_float,
+			"holding_count": holding_count_int
+		})
+		
+		# Update the portfolio's total_value by adding the new holding value
+		update_portfolio_query = """
+			UPDATE portfolio 
+			SET total_value = total_value + :value_to_add 
+			WHERE portfolio_id = :portfolio_id
+		"""
+		g.conn.execute(text(update_portfolio_query), {
+			"value_to_add": value_to_add,
+			"portfolio_id": portfolio_id
+		})
+		
+		g.conn.commit()
+		
+		# Redirect with success message including the added value
+		return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=success&message=Holdings added successfully! Portfolio value increased by ${value_to_add:.2f}')
+	
+	except Exception as e:
+		g.conn.rollback()
+		return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=error&message=Error adding holdings: {str(e)}')
 
 
 @app.route('/login')

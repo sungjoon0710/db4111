@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Investor Profile - ESGTrader{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #F0FFF0 !important;
+  }
+  
+  .section-title {
+    color: #2E7D32;
+    border-bottom: 3px solid #81C784;
+    padding-bottom: 10px;
+    margin-top: 20px;
+  }
+  
+  .manage-section {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    margin-top: 30px;
+    border: 2px solid #C8E6C9;
+  }
+  
+  .confirmation-success {
+    padding: 15px;
+    margin: 20px 0;
+    background-color: #E8F5E9;
+    border-left: 5px solid #4CAF50;
+    border-radius: 4px;
+    color: #2E7D32;
+    font-weight: bold;
+  }
+  
+  .confirmation-error {
+    padding: 15px;
+    margin: 20px 0;
+    background-color: #FFEBEE;
+    border-left: 5px solid #F44336;
+    border-radius: 4px;
+    color: #C62828;
+    font-weight: bold;
+  }
+  
+  .investor-details {
+    background-color: #F1F8E9;
+    padding: 20px;
+    border-radius: 4px;
+    margin: 20px 0;
+    border: 1px solid #C8E6C9;
+  }
+  
+  .investor-details h3 {
+    color: #2E7D32;
+    margin-top: 0;
+  }
+  
+  .investor-details p {
+    margin: 10px 0;
+    font-size: 16px;
+  }
+  
+  .investor-details strong {
+    color: #1B5E20;
+  }
+  
+  select, input[type="text"] {
+    padding: 12px;
+    border: 2px solid #C8E6C9;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  select:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: #4CAF50;
+  }
+  
+  .form-group {
+    margin: 20px 0;
+  }
+  
+  .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+  }
+  
+  .btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    font-size: 14px;
+    margin-right: 10px;
+  }
+  
+  .btn-primary {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background-color: #45a049;
+  }
+  
+  .btn-danger {
+    background-color: #F44336;
+    color: white;
+  }
+  
+  .btn-danger:hover {
+    background-color: #da190b;
+  }
+  
+  .warning-box {
+    background-color: #FFF3CD;
+    border: 2px solid #FFC107;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    color: #856404;
+  }
+  
+  .warning-box strong {
+    color: #856404;
+  }
+  
+  .action-section {
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 2px solid #E0E0E0;
+  }
+  
+  .delete-section {
+    margin-top: 40px;
+    padding: 20px;
+    background-color: #FFEBEE;
+    border-radius: 4px;
+    border: 2px solid #FFCDD2;
+  }
+  
+  .delete-section h3 {
+    color: #C62828;
+    margin-top: 0;
+  }
+</style>
+
+<h1>Manage Investor Profile</h1>
+<div class="nav-links">
+  <a href="/">← Back to Home</a> | 
+  <a href="/investors">View All Investors</a> |
+  <a href="/new_investor">Create New Investor</a>
+</div>
+
+<div class="manage-section">
+  <h2 class="section-title">Select Investor to Manage</h2>
+  
+  {% if confirmation == 'success' and message %}
+  <div class="confirmation-success">
+    ✓ {{ message }}
+  </div>
+  {% elif confirmation == 'error' and message %}
+  <div class="confirmation-error">
+    ✗ {{ message }}
+  </div>
+  {% endif %}
+  
+  <div class="form-group">
+    <label for="investor-select">Choose an Investor:</label>
+    <select id="investor-select" onchange="loadInvestor()">
+      <option value="">-- Select an Investor --</option>
+      {% for investor in investors %}
+      <option value="{{ investor.investor_id }}" 
+        {% if selected_investor and selected_investor.investor_id == investor.investor_id %}selected{% endif %}>
+        {{ investor.investor_id }} - {{ investor.company_name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  
+  {% if selected_investor %}
+  <div class="investor-details">
+    <h3>Current Investor Details</h3>
+    <p><strong>Investor ID:</strong> {{ selected_investor.investor_id }}</p>
+    <p><strong>Company Name:</strong> {{ selected_investor.company_name }}</p>
+    <p><strong>Associated Portfolios:</strong> {{ portfolio_count }}</p>
+  </div>
+  
+  <div class="action-section">
+    <h3 class="section-title">Update Company Name</h3>
+    <form method="POST" action="/update_investor">
+      <input type="hidden" name="investor_id" value="{{ selected_investor.investor_id }}">
+      <div class="form-group">
+        <label for="company_name">New Company Name:</label>
+        <input type="text" id="company_name" name="company_name" 
+               value="{{ selected_investor.company_name }}" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Update Company Name</button>
+    </form>
+  </div>
+  
+  <div class="delete-section">
+    <h3>Danger Zone: Delete Investor</h3>
+    <div class="warning-box">
+      <strong>⚠️ Warning:</strong> Deleting this investor will also delete:
+      <ul>
+        <li><strong>{{ portfolio_count }}</strong> associated portfolio(s)</li>
+        <li>All holdings within those portfolios</li>
+        <li>All risk metrics for those portfolios</li>
+        <li>All transactions for this investor</li>
+      </ul>
+      This action cannot be undone!
+    </div>
+    <form method="POST" action="/delete_investor" onsubmit="return confirmDelete()">
+      <input type="hidden" name="investor_id" value="{{ selected_investor.investor_id }}">
+      <button type="submit" class="btn btn-danger">Delete Investor</button>
+    </form>
+  </div>
+  {% else %}
+  <p style="margin-top: 30px; color: #666; font-style: italic;">
+    Please select an investor from the dropdown above to view details and make changes.
+  </p>
+  {% endif %}
+</div>
+
+<script>
+  function loadInvestor() {
+    const select = document.getElementById('investor-select');
+    const investorId = select.value;
+    if (investorId) {
+      window.location.href = `/manage_investor?investor_id=${investorId}`;
+    }
+  }
+  
+  function confirmDelete() {
+    return confirm('Are you sure you want to delete this investor and all associated data? This action cannot be undone!');
+  }
+</script>
+
+{% endblock %}
+

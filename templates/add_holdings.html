@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Holdings - ESGTrader{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #F0FFF0 !important;
+  }
+  
+  .section-title {
+    color: #2E7D32;
+    border-bottom: 3px solid #81C784;
+    padding-bottom: 10px;
+    margin-top: 20px;
+  }
+  
+  .holdings-section {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    margin-top: 30px;
+    border: 2px solid #C8E6C9;
+  }
+  
+  .confirmation-success {
+    padding: 15px;
+    margin: 20px 0;
+    background-color: #E8F5E9;
+    border-left: 5px solid #4CAF50;
+    border-radius: 4px;
+    color: #2E7D32;
+    font-weight: bold;
+  }
+  
+  .confirmation-error {
+    padding: 15px;
+    margin: 20px 0;
+    background-color: #FFEBEE;
+    border-left: 5px solid #F44336;
+    border-radius: 4px;
+    color: #C62828;
+    font-weight: bold;
+  }
+  
+  .form-group {
+    margin: 20px 0;
+  }
+  
+  .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+  }
+  
+  .form-description {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 15px;
+    font-style: italic;
+  }
+  
+  select, input[type="text"], input[type="number"] {
+    padding: 12px;
+    border: 2px solid #C8E6C9;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  select:focus, input[type="text"]:focus, input[type="number"]:focus {
+    outline: none;
+    border-color: #4CAF50;
+  }
+  
+  .btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  
+  .btn-primary {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background-color: #45a049;
+  }
+  
+  .btn-primary:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .step-container {
+    padding: 20px;
+    background-color: #F1F8E9;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #66BB6A;
+  }
+  
+  .step-number {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .info-box {
+    background-color: #E3F2FD;
+    border: 2px solid #2196F3;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    color: #0D47A1;
+  }
+  
+  .hidden {
+    display: none;
+  }
+</style>
+
+<h1>Add New Holdings to Portfolio</h1>
+<div class="nav-links">
+  <a href="/">← Back to Home</a> | 
+  <a href="/holdings">View All Holdings</a> |
+  <a href="/portfolios">View Portfolios</a>
+</div>
+
+<div class="holdings-section">
+  <h2 class="section-title">Add Holdings</h2>
+  
+  {% if confirmation == 'success' and message %}
+  <div class="confirmation-success">
+    ✓ {{ message }}
+  </div>
+  {% elif confirmation == 'error' and message %}
+  <div class="confirmation-error">
+    ✗ {{ message }}
+  </div>
+  {% endif %}
+  
+  <!-- Step 1: Select Investor -->
+  <div class="step-container">
+    <span class="step-number">1</span>
+    <strong>Select Investor</strong>
+    <div class="form-group">
+      <label for="investor-select">Choose an Investor:</label>
+      <select id="investor-select" onchange="loadPortfolios()">
+        <option value="">-- Select an Investor --</option>
+        {% for investor in investors %}
+        <option value="{{ investor.investor_id }}" 
+          {% if selected_investor_id == investor.investor_id %}selected{% endif %}>
+          {{ investor.investor_id }} - {{ investor.company_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  
+  <!-- Step 2 & 3: Select Portfolio and Add Holdings -->
+  <div id="holdings-form-container" class="{% if not selected_investor_id %}hidden{% endif %}">
+    <form method="POST" action="/submit_holdings" onsubmit="return validateForm()">
+      <input type="hidden" name="investor_id" id="investor_id" value="{{ selected_investor_id }}">
+      
+      <!-- Step 2: Select Portfolio -->
+      <div class="step-container">
+        <span class="step-number">2</span>
+        <strong>Select Portfolio</strong>
+        <div class="form-group">
+          <label for="portfolio_id">Choose a Portfolio:</label>
+          <select id="portfolio_id" name="portfolio_id" required>
+            <option value="">-- Select a Portfolio --</option>
+            {% for portfolio in portfolios %}
+            <option value="{{ portfolio.portfolio_id }}">
+              {{ portfolio.portfolio_id }} (Value: ${{ portfolio.total_value }}, Created: {{ portfolio.creation_date }})
+            </option>
+            {% endfor %}
+          </select>
+          {% if portfolios|length == 0 %}
+          <p class="form-description" style="color: #F44336; margin-top: 10px;">
+            No portfolios found for this investor. Please create a portfolio first.
+          </p>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Step 3: Add Holdings Details -->
+      <div class="step-container">
+        <span class="step-number">3</span>
+        <strong>Enter Holdings Details</strong>
+        
+        <div class="info-box">
+          <strong>ℹ️ Input Guidelines:</strong>
+          <ul style="margin: 10px 0; padding-left: 20px;">
+            <li><strong>Average Price:</strong> Enter a numeric value (e.g., 380.0). Integers will be converted to float.</li>
+            <li><strong>Holding Count:</strong> Enter an integer. Decimals will be rounded down.</li>
+          </ul>
+        </div>
+        
+        <div class="form-group">
+          <label for="stock_id">Select Stock:</label>
+          <select id="stock_id" name="stock_id" required>
+            <option value="">-- Select a Stock --</option>
+            {% for stock in stocks %}
+            <option value="{{ stock.stock_id }}">
+              {{ stock.ticker }} - {{ stock.sector }} (ID: {{ stock.stock_id }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="average_price">Average Price ($):</label>
+          <input type="text" id="average_price" name="average_price" 
+                 placeholder="e.g., 380.0" required>
+          <p class="form-description">Enter the average purchase price per share</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="holding_count">Holding Count:</label>
+          <input type="text" id="holding_count" name="holding_count" 
+                 placeholder="e.g., 100" required>
+          <p class="form-description">Enter the number of shares held</p>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" {% if portfolios|length == 0 %}disabled{% endif %}>
+          Add Holdings to Portfolio
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  {% if not selected_investor_id %}
+  <p style="margin-top: 30px; color: #666; font-style: italic;">
+    Please select an investor from the dropdown above to begin adding holdings.
+  </p>
+  {% endif %}
+</div>
+
+<script>
+  function loadPortfolios() {
+    const investorSelect = document.getElementById('investor-select');
+    const investorId = investorSelect.value;
+    const formContainer = document.getElementById('holdings-form-container');
+    const investorIdInput = document.getElementById('investor_id');
+    
+    if (investorId) {
+      investorIdInput.value = investorId;
+      window.location.href = `/add_holdings?investor_id=${investorId}`;
+    } else {
+      formContainer.classList.add('hidden');
+    }
+  }
+  
+  function validateForm() {
+    const averagePrice = document.getElementById('average_price').value;
+    const holdingCount = document.getElementById('holding_count').value;
+    
+    // Validate average price is numeric
+    if (isNaN(averagePrice) || averagePrice.trim() === '') {
+      alert('Average price must be a numeric value');
+      return false;
+    }
+    
+    // Validate holding count is numeric
+    if (isNaN(holdingCount) || holdingCount.trim() === '') {
+      alert('Holding count must be a numeric value');
+      return false;
+    }
+    
+    return true;
+  }
+</script>
+
+{% endblock %}
