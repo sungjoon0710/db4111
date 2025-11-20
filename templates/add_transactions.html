@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Transaction - ESGTrader{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #F0FFF0 !important;
+  }
+  
+  .section-title {
+    color: #2E7D32;
+    border-bottom: 3px solid #81C784;
+    padding-bottom: 10px;
+    margin-top: 20px;
+  }
+  
+  .transaction-section {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    margin-top: 30px;
+    border: 2px solid #C8E6C9;
+  }
+  
+  .confirmation-success {
+    padding: 15px;
+    margin: 20px 0;
+    background-color: #E8F5E9;
+    border-left: 5px solid #4CAF50;
+    border-radius: 4px;
+    color: #2E7D32;
+    font-weight: bold;
+  }
+  
+  .confirmation-error {
+    padding: 15px;
+    margin: 20px 0;
+    background-color: #FFEBEE;
+    border-left: 5px solid #F44336;
+    border-radius: 4px;
+    color: #C62828;
+    font-weight: bold;
+  }
+  
+  .form-group {
+    margin: 20px 0;
+  }
+  
+  .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+  }
+  
+  .form-description {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 15px;
+    font-style: italic;
+  }
+  
+  select, input[type="text"], input[type="number"] {
+    padding: 12px;
+    border: 2px solid #C8E6C9;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  select:focus, input[type="text"]:focus, input[type="number"]:focus {
+    outline: none;
+    border-color: #4CAF50;
+  }
+  
+  .btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  
+  .btn-primary {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background-color: #45a049;
+  }
+  
+  .btn-primary:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .step-container {
+    padding: 20px;
+    background-color: #F1F8E9;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #66BB6A;
+  }
+  
+  .step-number {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .info-box {
+    background-color: #E3F2FD;
+    border: 2px solid #2196F3;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    color: #0D47A1;
+  }
+  
+  .price-info {
+    background-color: #FFF3E0;
+    border: 2px solid #FF9800;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    color: #E65100;
+    font-weight: bold;
+  }
+  
+  .hidden {
+    display: none;
+  }
+</style>
+
+<h1>Add New Transaction</h1>
+<div class="nav-links">
+  <a href="/">← Back to Home</a> | 
+  <a href="/transactions">View All Transactions</a>
+</div>
+
+<div class="transaction-section">
+  <h2 class="section-title">Record Transaction</h2>
+  
+  {% if confirmation == 'success' and message %}
+  <div class="confirmation-success">
+    ✓ {{ message }}
+  </div>
+  {% elif confirmation == 'error' and message %}
+  <div class="confirmation-error">
+    ✗ {{ message }}
+  </div>
+  {% endif %}
+  
+  <form method="POST" action="/submit_transaction" onsubmit="return validateForm()">
+    
+    <!-- Step 1: Select Investor -->
+    <div class="step-container">
+      <span class="step-number">1</span>
+      <strong>Select Investor</strong>
+      <div class="form-group">
+        <label for="investor_id">Choose an Investor:</label>
+        <select id="investor_id" name="investor_id" required>
+          <option value="">-- Select an Investor --</option>
+          {% for investor in investors %}
+          <option value="{{ investor.investor_id }}">
+            {{ investor.investor_id }} - {{ investor.company_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    
+    <!-- Step 2: Select Stock -->
+    <div class="step-container">
+      <span class="step-number">2</span>
+      <strong>Select Stock</strong>
+      <div class="form-group">
+        <label for="stock_id">Choose a Stock:</label>
+        <select id="stock_id" name="stock_id" required onchange="updateStockPrice()">
+          <option value="">-- Select a Stock --</option>
+          {% for stock in stocks %}
+          <option value="{{ stock.stock_id }}" data-price="{{ stock.latest_price }}">
+            {{ stock.ticker }} - {{ stock.sector }} (ID: {{ stock.stock_id }})
+          </option>
+          {% endfor %}
+        </select>
+        <p class="form-description">Select the stock for this transaction</p>
+      </div>
+      
+      <div id="price-display" class="price-info hidden">
+        <strong>📊 Latest Stock Price:</strong> $<span id="price-value">0.00</span>
+        <p style="margin-top: 5px; font-size: 13px; font-weight: normal;">This is the unit price that will be used for the transaction.</p>
+      </div>
+    </div>
+    
+    <!-- Step 3: Transaction Details -->
+    <div class="step-container">
+      <span class="step-number">3</span>
+      <strong>Enter Transaction Details</strong>
+      
+      <div class="info-box">
+        <strong>ℹ️ Transaction Information:</strong>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          <li><strong>Unit Price:</strong> Automatically set from the latest stock price</li>
+          <li><strong>Transaction Time:</strong> Current time (fallback: Nov 19, 2025 8:15 PM)</li>
+          <li><strong>Unit Number:</strong> Must be a positive integer</li>
+        </ul>
+      </div>
+      
+      <div class="form-group">
+        <label for="transaction_type">Transaction Type:</label>
+        <select id="transaction_type" name="transaction_type" required>
+          <option value="">-- Select Type --</option>
+          <option value="buy">Buy</option>
+          <option value="sell">Sell</option>
+        </select>
+        <p class="form-description">Choose whether this is a buy or sell transaction</p>
+      </div>
+      
+      <div class="form-group">
+        <label for="unit_number">Unit Number:</label>
+        <input type="number" id="unit_number" name="unit_number" 
+               placeholder="e.g., 200" min="1" max="1000000" step="1" required>
+        <p class="form-description">Enter the number of shares to transact (1 - 1,000,000)</p>
+      </div>
+      
+      <!-- Display current holdings for SELL validation -->
+      <div id="holdings-info" class="info-box hidden" style="background-color: #FFF3E0; border-color: #FF9800;">
+        <strong>📊 Current Holdings:</strong>
+        <p id="holdings-text" style="margin: 5px 0; font-size: 14px;"></p>
+      </div>
+      
+      <button type="submit" class="btn btn-primary">
+        Record Transaction
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function updateStockPrice() {
+    const stockSelect = document.getElementById('stock_id');
+    const priceDisplay = document.getElementById('price-display');
+    const priceValue = document.getElementById('price-value');
+    
+    const selectedOption = stockSelect.options[stockSelect.selectedIndex];
+    
+    if (selectedOption.value) {
+      const price = selectedOption.getAttribute('data-price');
+      priceValue.textContent = parseFloat(price).toFixed(2);
+      priceDisplay.classList.remove('hidden');
+    } else {
+      priceDisplay.classList.add('hidden');
+    }
+    
+    // Update holdings info when stock changes
+    checkHoldings();
+  }
+  
+  function checkHoldings() {
+    const investorId = document.getElementById('investor_id').value;
+    const stockId = document.getElementById('stock_id').value;
+    const transactionType = document.getElementById('transaction_type').value;
+    const holdingsInfo = document.getElementById('holdings-info');
+    const holdingsText = document.getElementById('holdings-text');
+    
+    // Only show holdings for sell transactions
+    if (transactionType === 'sell' && investorId && stockId) {
+      // Fetch holdings from server
+      fetch(`/check_holdings?investor_id=${investorId}&stock_id=${stockId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.has_holdings) {
+            holdingsText.innerHTML = `You currently own <strong>${data.holding_count} shares</strong> of this stock (Average Price: $${data.average_price})`;
+            holdingsInfo.classList.remove('hidden');
+            // Update max attribute on unit_number input
+            document.getElementById('unit_number').setAttribute('max', data.holding_count);
+          } else {
+            holdingsText.innerHTML = `⚠️ You don't own any shares of this stock. Cannot sell.`;
+            holdingsInfo.classList.remove('hidden');
+            document.getElementById('unit_number').setAttribute('max', '0');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching holdings:', error);
+        });
+    } else if (transactionType === 'buy') {
+      holdingsInfo.classList.add('hidden');
+      document.getElementById('unit_number').setAttribute('max', '1000000');
+    } else {
+      holdingsInfo.classList.add('hidden');
+    }
+  }
+  
+  // Add event listeners
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('investor_id').addEventListener('change', checkHoldings);
+    document.getElementById('stock_id').addEventListener('change', checkHoldings);
+    document.getElementById('transaction_type').addEventListener('change', checkHoldings);
+  });
+  
+  function validateForm() {
+    const investorId = document.getElementById('investor_id').value;
+    const stockId = document.getElementById('stock_id').value;
+    const transactionType = document.getElementById('transaction_type').value;
+    const unitNumber = document.getElementById('unit_number').value;
+    
+    // Validate all required fields
+    if (!investorId || !stockId || !transactionType || !unitNumber) {
+      alert('Please fill in all required fields');
+      return false;
+    }
+    
+    // Validate unit number is a positive integer within range
+    const unitNum = parseInt(unitNumber);
+    if (isNaN(unitNum) || unitNum < 1) {
+      alert('Unit number must be a positive integer');
+      return false;
+    }
+    
+    if (unitNum > 1000000) {
+      alert('Unit number cannot exceed 1,000,000 shares per transaction');
+      return false;
+    }
+    
+    // Additional validation for sell transactions
+    if (transactionType === 'sell') {
+      const maxShares = parseInt(document.getElementById('unit_number').getAttribute('max'));
+      if (maxShares === 0) {
+        alert('You cannot sell this stock as you do not own any shares.');
+        return false;
+      }
+      if (unitNum > maxShares) {
+        alert(`You cannot sell ${unitNum} shares. You only have ${maxShares} shares available.`);
+        return false;
+      }
+    }
+    
+    return true;
+  }
+</script>
+
+{% endblock %}
+

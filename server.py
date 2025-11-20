@@ -833,6 +833,265 @@ def submit_holdings():
 		return redirect(f'/add_holdings?investor_id={investor_id}&confirmation=error&message=Error adding holdings: {str(e)}')
 
 
+@app.route('/add_transactions', methods=['GET'])
+def add_transactions():
+	"""
+	Page for adding new transactions
+	"""
+	# Get all investors for the dropdown
+	investors_query = "SELECT investor_id, company_name FROM investor ORDER BY investor_id"
+	cursor = g.conn.execute(text(investors_query))
+	investors_list = []
+	for result in cursor:
+		investors_list.append({'investor_id': result[0], 'company_name': result[1]})
+	cursor.close()
+	
+	# Get all stocks with their latest prices for the dropdown
+	stocks_query = """
+		SELECT s.stock_id, s.ticker, s.sector, sp.daily_price as latest_price
+		FROM stock s
+		LEFT JOIN (
+			SELECT DISTINCT ON (stock_id) stock_id, daily_price
+			FROM stock_price
+			ORDER BY stock_id, price_date DESC
+		) sp ON s.stock_id = sp.stock_id
+		ORDER BY s.ticker
+	"""
+	cursor = g.conn.execute(text(stocks_query))
+	stocks_list = []
+	for result in cursor:
+		stocks_list.append({
+			'stock_id': result[0],
+			'ticker': result[1],
+			'sector': result[2],
+			'latest_price': result[3] if result[3] else 0.0
+		})
+	cursor.close()
+	
+	# Get confirmation messages
+	confirmation = request.args.get('confirmation', '')
+	message = request.args.get('message', '')
+	
+	context = dict(
+		investors=investors_list,
+		stocks=stocks_list,
+		confirmation=confirmation,
+		message=message
+	)
+	return render_template("add_transactions.html", **context)
+
+
+@app.route('/check_holdings', methods=['GET'])
+def check_holdings():
+	"""
+	API endpoint to check if an investor has holdings for a specific stock
+	Returns JSON with holdings information
+	"""
+	investor_id = request.args.get('investor_id', '')
+	stock_id = request.args.get('stock_id', '')
+	
+	if not investor_id or not stock_id:
+		return {'has_holdings': False, 'holding_count': 0, 'average_price': 0}
+	
+	try:
+		# Find the investor's portfolio
+		portfolio_query = """
+			SELECT portfolio_id 
+			FROM portfolio 
+			WHERE investor_id = :investor_id 
+			ORDER BY creation_date DESC 
+			LIMIT 1
+		"""
+		cursor = g.conn.execute(text(portfolio_query), {"investor_id": investor_id})
+		portfolio = cursor.fetchone()
+		cursor.close()
+		
+		if not portfolio:
+			return {'has_holdings': False, 'holding_count': 0, 'average_price': 0}
+		
+		portfolio_id = portfolio[0]
+		
+		# Check holdings
+		holdings_query = """
+			SELECT holding_count, average_price 
+			FROM holdings 
+			WHERE stock_id = :stock_id AND portfolio_id = :portfolio_id
+		"""
+		cursor = g.conn.execute(text(holdings_query), {
+			"stock_id": stock_id,
+			"portfolio_id": portfolio_id
+		})
+		holding = cursor.fetchone()
+		cursor.close()
+		
+		if holding and holding[0] > 0:
+			return {
+				'has_holdings': True,
+				'holding_count': holding[0],
+				'average_price': float(holding[1])
+			}
+		else:
+			return {'has_holdings': False, 'holding_count': 0, 'average_price': 0}
+	
+	except Exception as e:
+		print(f"Error checking holdings: {e}")
+		return {'has_holdings': False, 'holding_count': 0, 'average_price': 0}
+
+
+@app.route('/submit_transaction', methods=['POST'])
+def submit_transaction():
+	"""
+	Submit a new transaction to the database
+	"""
+	investor_id = request.form.get('investor_id', '').strip()
+	stock_id = request.form.get('stock_id', '').strip()
+	transaction_type = request.form.get('transaction_type', '').strip()
+	unit_number = request.form.get('unit_number', '').strip()
+	
+	# Validate all required fields are present
+	if not all([investor_id, stock_id, transaction_type, unit_number]):
+		return redirect('/add_transactions?confirmation=error&message=All fields are required')
+	
+	# Validate transaction type is either 'buy' or 'sell'
+	if transaction_type not in ['buy', 'sell']:
+		return redirect('/add_transactions?confirmation=error&message=Transaction type must be buy or sell')
+	
+	# Validate and convert unit_number to int
+	try:
+		# First check if it's a valid number
+		unit_number_float = float(unit_number)
+		unit_number_int = int(unit_number_float)
+		
+		# Check if the original value was actually an integer (no decimal part)
+		if unit_number_float != unit_number_int:
+			return redirect('/add_transactions?confirmation=error&message=Unit number must be a whole number (no decimals)')
+		
+		if unit_number_int < 1:
+			raise ValueError("Unit number must be positive")
+		if unit_number_int > 1000000:
+			raise ValueError("Unit number exceeds maximum")
+	except ValueError as ve:
+		if "exceeds maximum" in str(ve):
+			return redirect('/add_transactions?confirmation=error&message=Unit number cannot exceed 1,000,000 shares per transaction')
+		elif "invalid literal" in str(ve) or "could not convert" in str(ve):
+			return redirect('/add_transactions?confirmation=error&message=Unit number must be a valid number')
+		else:
+			return redirect('/add_transactions?confirmation=error&message=Unit number must be a positive integer between 1 and 1,000,000')
+	
+	try:
+		# Get the latest stock price for the selected stock
+		price_query = """
+			SELECT daily_price 
+			FROM stock_price 
+			WHERE stock_id = :stock_id 
+			ORDER BY price_date DESC 
+			LIMIT 1
+		"""
+		cursor = g.conn.execute(text(price_query), {"stock_id": stock_id})
+		price_result = cursor.fetchone()
+		cursor.close()
+		
+		if not price_result or price_result[0] is None:
+			return redirect('/add_transactions?confirmation=error&message=No price data found for selected stock')
+		
+		unit_price = float(price_result[0])
+		
+		# Get current timestamp, or use fallback date
+		try:
+			transaction_time = datetime.now()
+		except:
+			# Fallback to Nov 19, 2025 8:15 PM
+			transaction_time = datetime(2025, 11, 19, 20, 15, 0)
+		
+		# Additional validation for SELL transactions
+		if transaction_type == 'sell':
+			# Find the investor's portfolio
+			portfolio_query = """
+				SELECT portfolio_id 
+				FROM portfolio 
+				WHERE investor_id = :investor_id 
+				ORDER BY creation_date DESC 
+				LIMIT 1
+			"""
+			cursor = g.conn.execute(text(portfolio_query), {"investor_id": investor_id})
+			portfolio_result = cursor.fetchone()
+			cursor.close()
+			
+			if not portfolio_result:
+				return redirect('/add_transactions?confirmation=error&message=Cannot sell - No portfolio found for this investor')
+			
+			portfolio_id = portfolio_result[0]
+			
+			# Check current holdings
+			holdings_query = """
+				SELECT holding_count 
+				FROM holdings 
+				WHERE stock_id = :stock_id AND portfolio_id = :portfolio_id
+			"""
+			cursor = g.conn.execute(text(holdings_query), {
+				"stock_id": stock_id,
+				"portfolio_id": portfolio_id
+			})
+			holdings_result = cursor.fetchone()
+			cursor.close()
+			
+			if not holdings_result or holdings_result[0] is None:
+				return redirect(f'/add_transactions?confirmation=error&message=Cannot sell {stock_id} - You do not own this stock')
+			
+			current_holdings = holdings_result[0]
+			if current_holdings < unit_number_int:
+				return redirect(f'/add_transactions?confirmation=error&message=Cannot sell {unit_number_int} shares - You only have {current_holdings} shares available')
+		
+		# Insert the new transaction
+		insert_query = """
+			INSERT INTO transaction(investor_id, stock_id, transaction_time, transaction_type, unit_price, unit_number) 
+			VALUES (:investor_id, :stock_id, :transaction_time, :transaction_type, :unit_price, :unit_number)
+		"""
+		g.conn.execute(text(insert_query), {
+			"investor_id": investor_id,
+			"stock_id": stock_id,
+			"transaction_time": transaction_time,
+			"transaction_type": transaction_type,
+			"unit_price": unit_price,
+			"unit_number": unit_number_int
+		})
+		
+		g.conn.commit()
+		
+		# Calculate transaction value
+		transaction_value = unit_price * unit_number_int
+		
+		# Redirect with success message
+		return redirect(f'/add_transactions?confirmation=success&message=Transaction recorded successfully! {transaction_type.upper()} {unit_number_int} shares at ${unit_price:.2f} (Total: ${transaction_value:.2f})')
+	
+	except Exception as e:
+		g.conn.rollback()
+		# Parse trigger error messages to show user-friendly errors
+		error_message = str(e)
+		
+		# Extract meaningful error from PostgreSQL exception
+		if "No portfolio found for investor" in error_message:
+			error_message = "This investor does not have a portfolio. Please create a portfolio first."
+		elif "Cannot sell stock" in error_message or "no holdings found" in error_message:
+			error_message = f"Cannot sell {stock_id} - You don't own this stock in your portfolio."
+		elif "Insufficient shares to sell" in error_message:
+			# Try to extract the available shares count
+			if "Available:" in error_message:
+				try:
+					parts = error_message.split("Available:")
+					available = parts[1].split(",")[0].strip()
+					error_message = f"Insufficient shares to sell. You only have {available} shares available."
+				except:
+					error_message = "Insufficient shares to sell. You don't have enough shares in your portfolio."
+			else:
+				error_message = "Insufficient shares to sell. You don't have enough shares in your portfolio."
+		else:
+			# For any other database errors, show a generic message with details
+			error_message = f"Transaction failed: {error_message}"
+		
+		return redirect(f'/add_transactions?confirmation=error&message={error_message}')
+
+
 @app.route('/login')
 def login():
 	abort(401)
