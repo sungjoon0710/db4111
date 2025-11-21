@@ -1,4 +1,4 @@
-# ESGTrader - Database Project Part 3
+# ESGTrader - Database Project Part 4
 Project 1, Part 3 — COMS W4111 Introduction to Databases
 Group: Project 1 Group 1
 
