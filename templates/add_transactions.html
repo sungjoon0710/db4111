@@ -154,6 +154,12 @@
 
 <div class="transaction-section">
   <h2 class="section-title">Record Transaction</h2>
+
+  <div style="background-color: #E8F5E9; border-left: 4px solid #4CAF50; padding: 15px; margin: 20px 0; border-radius: 4px;">
+    <strong>🔄 Automatic Holdings Update Using DB Trigger:</strong> This page uses the <code>update_holdings_on_transaction</code> trigger.<br>
+    When you record a transaction, your portfolio holdings are automatically updated in real-time.<br>
+    BUY transactions add shares and recalculate average price. SELL transactions validate and decrement your holdings.
+  </div>
   
   {% if confirmation == 'success' and message %}
   <div class="confirmation-success">
